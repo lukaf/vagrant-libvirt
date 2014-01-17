@@ -28,7 +28,7 @@ module VagrantPlugins
               if Vagrant::VERSION < "1.4.0"
                 b2.use NFS
               else
-                b2.use SyncedFolderCleanup
+                #b2.use SyncedFolderCleanup
                 b2.use SyncedFolders
               end
 
@@ -68,7 +68,7 @@ module VagrantPlugins
               if Vagrant::VERSION < "1.4.0"
                 b3.use NFS
               else
-                b3.use SyncedFolderCleanup
+                #b3.use SyncedFolderCleanup
                 b3.use SyncedFolders
               end
               b3.use PrepareNFSSettings
