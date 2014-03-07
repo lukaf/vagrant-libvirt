@@ -1,10 +1,12 @@
 require 'vagrant/action/builder'
+require 'log4r'
 
 module VagrantPlugins
   module ProviderLibvirt
     module Action
       # Include the built-in modules so we can use them as top-level things.
       include Vagrant::Action::Builtin
+      @logger = Log4r::Logger.new('vagrant_libvirt::action') 
 
       # This action is called to bring the box up from nothing.
       def self.action_up
@@ -25,18 +27,18 @@ module VagrantPlugins
               b2.use CreateNetworks
               b2.use CreateNetworkInterfaces
 
-              if Vagrant::VERSION < "1.4.0"
-                b2.use NFS
-              else
-                #b2.use SyncedFolderCleanup
-                b2.use SyncedFolders
-              end
+              b2.use StartDomain
+              b2.use WaitTillUp
+
+              b2.use PrepareNFSValidIds
+#              b2.use SyncedFolderCleanup
+              b2.use SyncedFolders
+
+              b2.use ForwardPorts
 
               b2.use PrepareNFSSettings
               b2.use ShareFolders
               b2.use SetHostname
-              b2.use StartDomain
-              b2.use WaitTillUp
               b2.use SyncFolders
             else
               b2.use action_start
@@ -57,25 +59,32 @@ module VagrantPlugins
             next if env[:result]
 
             b2.use Call, IsSuspended do |env2, b3|
+              # if vm is suspended resume it then exit
               if env2[:result]
                 b3.use ResumeDomain
                 next
               end
 
-              # VM is not running or suspended. Start it.. Machine should gain
-              # IP address when comming up, so wait for dhcp lease and store IP
-              # into machines data_dir.
-              if Vagrant::VERSION < "1.4.0"
-                b3.use NFS
-              else
-                #b3.use SyncedFolderCleanup
-                b3.use SyncedFolders
-              end
+              # VM is not running or suspended.
+
+              # Ensure networks are created and active
+              b3.use CreateNetworks
+
+              # Start it..
+              b3.use StartDomain
+
+              # Machine should gain IP address when comming up,
+              # so wait for dhcp lease and store IP into machines data_dir.
+              b3.use WaitTillUp
+
+              b3.use PrepareNFSValidIds
+              #b3.use SyncedFolderCleanup
+              b3.use SyncedFolders
+
+              b3.use ForwardPorts
               b3.use PrepareNFSSettings
               b3.use ShareFolders
 
-              b3.use StartDomain
-              b3.use WaitTillUp
             end
           end
         end
@@ -87,6 +96,7 @@ module VagrantPlugins
         Vagrant::Action::Builder.new.tap do |b|
           b.use ConfigValidate
           b.use ConnectLibvirt
+          b.use ClearForwardedPorts
           b.use Call, IsCreated do |env, b2|
             if !env[:result]
               b2.use MessageNotCreated
@@ -136,6 +146,7 @@ module VagrantPlugins
             end
 
             b2.use ConnectLibvirt
+            b2.use ClearForwardedPorts
             b2.use PruneNFSExports
             b2.use DestroyDomain
             b2.use DestroyNetworks
@@ -289,6 +300,8 @@ module VagrantPlugins
       autoload :CreateNetworks, action_root.join('create_networks')
       autoload :DestroyDomain, action_root.join('destroy_domain')
       autoload :DestroyNetworks, action_root.join('destroy_networks')
+      autoload :ForwardPorts, action_root.join('forward_ports')
+      autoload :ClearForwardedPorts, action_root.join('forward_ports')
       autoload :HaltDomain, action_root.join('halt_domain')
       autoload :HandleBoxImage, action_root.join('handle_box_image')
       autoload :HandleStoragePool, action_root.join('handle_storage_pool')
@@ -300,6 +313,7 @@ module VagrantPlugins
       autoload :MessageNotRunning, action_root.join('message_not_running')
       autoload :MessageNotSuspended, action_root.join('message_not_suspended')
       autoload :PrepareNFSSettings, action_root.join('prepare_nfs_settings')
+      autoload :PrepareNFSValidIds, action_root.join('prepare_nfs_valid_ids')
       autoload :PruneNFSExports, action_root.join('prune_nfs_exports')
       autoload :ReadSSHInfo, action_root.join('read_ssh_info')
       autoload :ReadState, action_root.join('read_state')
@@ -313,10 +327,8 @@ module VagrantPlugins
       autoload :WaitTillUp, action_root.join('wait_till_up')
       autoload :SSHRun,  'vagrant/action/builtin/ssh_run'
       autoload :HandleBoxUrl, 'vagrant/action/builtin/handle_box_url'
-      unless Vagrant::VERSION < "1.4.0"
-        autoload :SyncedFolders, 'vagrant/action/builtin/synced_folders'
-        autoload :SyncedFolderCleanup, 'vagrant/action/builtin/synced_folder_cleanup'
-      end
+      autoload :SyncedFolders, 'vagrant/action/builtin/synced_folders'
+      autoload :SyncedFolderCleanup, 'vagrant/action/builtin/synced_folder_cleanup'
     end
   end
 end

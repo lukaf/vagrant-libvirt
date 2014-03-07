@@ -26,7 +26,8 @@ module VagrantPlugins
       attr_accessor :storage_pool_name
 
       # Libvirt default network
-      attr_accessor :default_network
+      attr_accessor :management_network_name
+      attr_accessor :management_network_address
 
       # Default host prefix (alternative to use project folder name)
       attr_accessor :default_prefix
@@ -38,6 +39,9 @@ module VagrantPlugins
       attr_accessor :disk_bus
       attr_accessor :nested
       attr_accessor :volume_cache
+      attr_accessor :kernel
+      attr_accessor :cmd_line
+      attr_accessor :initrd
 
       def initialize
         @driver            = UNSET_VALUE
@@ -47,8 +51,8 @@ module VagrantPlugins
         @password          = UNSET_VALUE
         @id_ssh_key_file   = UNSET_VALUE
         @storage_pool_name = UNSET_VALUE
-        @default_network   = UNSET_VALUE
-        @default_prefix    = UNSET_VALUE
+        @management_network_name    = UNSET_VALUE
+        @management_network_address = UNSET_VALUE
 
         # Domain specific settings.
         @memory            = UNSET_VALUE
@@ -57,6 +61,9 @@ module VagrantPlugins
         @disk_bus          = UNSET_VALUE
         @nested            = UNSET_VALUE
         @volume_cache      = UNSET_VALUE
+        @kernel            = UNSET_VALUE
+        @initrd            = UNSET_VALUE
+        @cmd_line          = UNSET_VALUE
       end
 
       def finalize!
@@ -67,8 +74,8 @@ module VagrantPlugins
         @password = nil if @password == UNSET_VALUE
         @id_ssh_key_file = 'id_rsa' if @id_ssh_key_file == UNSET_VALUE
         @storage_pool_name = 'default' if @storage_pool_name == UNSET_VALUE
-        @default_network = 'default' if @default_network == UNSET_VALUE
-        @default_prefix = nil if @default_prefix == UNSET_VALUE
+        @management_network_name = 'vagrant-libvirt' if @management_network_name == UNSET_VALUE
+        @management_network_address = '192.168.121.0/24' if @management_network_address == UNSET_VALUE
 
         # Domain specific settings.
         @memory = 512 if @memory == UNSET_VALUE
@@ -77,6 +84,9 @@ module VagrantPlugins
         @disk_bus = 'virtio' if @disk_bus == UNSET_VALUE
         @nested = false if @nested == UNSET_VALUE
         @volume_cache = 'default' if @volume_cache == UNSET_VALUE
+        @kernel = nil if @kernel == UNSET_VALUE
+        @cmd_line = '' if @cmd_line == UNSET_VALUE
+        @initrd = '' if @initrd == UNSET_VALUE
       end
 
       def validate(machine)

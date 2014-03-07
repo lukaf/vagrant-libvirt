@@ -1,13 +1,13 @@
 # Vagrant Libvirt Provider
 
-This is a [Vagrant](http://www.vagrantup.com) 1.3+ plugin that adds an
+This is a [Vagrant](http://www.vagrantup.com) 1.4.3+ plugin that adds an
 [Libvirt](http://libvirt.org) provider to Vagrant, allowing Vagrant to
 control and provision machines via Libvirt toolkit.
 
-**Note:** Actual version (0.0.13) is still a development one. Feedback is
+**Note:** Actual version (0.0.15) is still a development one. Feedback is
 welcome and can help a lot :-)
 
-## Features (Version 0.0.13)
+## Features
 
 * Controll local Libvirt hypervisors.
 * Vagrant `up`, `destroy`, `suspend`, `resume`, `halt`, `ssh`, `reload` and `provision` commands.
@@ -29,7 +29,7 @@ welcome and can help a lot :-)
 
 ## Installation
 
-Install using standard [Vagrant 1.3+](http://downloads.vagrantup.com) plugin installation methods. After
+Install using standard [Vagrant 1.4.3+](http://downloads.vagrantup.com) plugin installation methods. After
 installing, `vagrant up` and specify the `libvirt` provider. An example is shown below.
 
 ```
@@ -99,8 +99,6 @@ This provider exposes quite a few provider-specific configuration options:
 * `password` - Password to access Libvirt.
 * `id_ssh_key_file` - The id ssh key file name to access Libvirt (eg: id_dsa or id_rsa or ... in the user .ssh directory)
 * `storage_pool_name` - Libvirt storage pool name, where box image and instance snapshots will be stored.
-* `default_network` - Libvirt default network name. If not specified default network name is 'default'.
-* `default_prefix` - Set a prefix for the machines that's different than the project dir name.
 
 ### Domain Specific Options
 
@@ -110,6 +108,10 @@ This provider exposes quite a few provider-specific configuration options:
 * `nested` - [Enable nested virtualization](https://github.com/torvalds/linux/blob/master/Documentation/virtual/kvm/nested-vmx.txt). Default is false.
 * `cpu_mode` - What cpu mode to use for nested virtualization. Defaults to 'host-model' if not set.
 * `volume_cache` - Controls the cache mechanism. Possible values are "default", "none", "writethrough", "writeback", "directsync" and "unsafe". [See driver->cache in libvirt documentation](http://libvirt.org/formatdomain.html#elementsDisks).
+* `kernel` - To launch the guest with a kernel residing on host filesystems (Equivalent to qemu `-kernel`)
+* `initrd` - To specify the initramfs/initrd to use for the guest (Equivalent to qemu `-initrd`)
+* `cmd_line` - Arguments passed on to the guest kernel initramfs or initrd to use (Equivalent to qemu `-append`)
+
 
 Specific domain settings can be set for each domain separately in multi-VM
 environment. Example below shows a part of Vagrantfile, where specific options
@@ -160,7 +162,7 @@ Vagrant goes through steps below when creating new project:
 ## Networks
 
 Networking features in the form of `config.vm.network` support private networks
-concept. Port Forwarding is currently not supported.
+concept.
 
 Public Network interfaces are currently implemented using the macvtap driver. The macvtap
 driver is only available with the Linux Kernel version >= 2.6.24. See the following libvirt
@@ -232,15 +234,24 @@ starts with 'libvirt__' string. Here is a list of those options:
   Default mode is 'bridge'.
 * `:mac` - MAC address for the interface.
 
-## Obtaining Domain IP Address
+### Management Network
 
-Libvirt doesn't provide standard way how to find out an IP address of running
-domain. But we know, what is MAC address of virtual machine. Libvirt is closely
-connected with dnsmasq server, which acts also as a DHCP server. Dnsmasq server
-makes lease information public in `/var/lib/libvirt/dnsmasq` directory, or in
-`/var/lib/misc/dnsmasq.leases` file on some systems. This is the place, where
-information like which MAC address has which IP address resides and it's parsed
-by vagrant-libvirt plugin.
+Vagrant-libvirt uses a private network to perform some management operations
+on VMs. All VMs will have an interface connected to this network and
+an IP address dynamically assigned by libvirt. This is in addition to any
+networks you configure. The name and address used by this network are
+configurable at the provider level.
+
+* `management_network_name` - Name of libvirt network to which all VMs will be connected. If not specified the default is 'vagrant-libvirt'.
+* `management_network_address` - Address of network to which all VMs will be connected. Must include the address and subnet mask. If not specified the default is '192.168.121.0/24'.
+
+You may wonder how vagrant-libvirt knows the IP address a VM received.
+Libvirt doesn't provide a standard way to find out the IP address of a running
+domain. But we do know the MAC address of the virtual machine's interface on
+the management network. Libvirt is closely connected with dnsmasq, which acts as
+a DHCP server. dnsmasq writes lease information in the `/var/lib/libvirt/dnsmasq`
+directory. Vagrant-libvirt looks for the MAC address in this file and extracts
+the corresponding IP address.
 
 ## SSH Access To VM
 
@@ -259,6 +270,12 @@ Configurable ssh parameters in Vagrantfile after provider version 0.0.5 are:
 * `config.ssh.guest_port` - Default port is set to 22.
 * `config.ssh.forward_agent` - Default is false.
 * `config.ssh.forward_x11` - Default is false.
+
+## Forwarded Ports
+
+vagrant-libvirt supports Forwarded Ports via ssh port forwarding.  For each
+`forwarded_port` directive you specify in your Vagrantfile, vagrant-libvirt
+will maintain an active ssh process for the lifetime of the VM.
 
 ## Synced Folders
 
